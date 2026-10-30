@@ -218,6 +218,50 @@ function rotateFace(face, x, y) {
 	return face;
 }
 
+/**
+ * Wires strung between blocks ({@code scene.wires}: { from: [x, y, z], to: [x, y, z], color, width, anchor }), drawn
+ * as the game draws a leash and RadioCraft its antenna wire: two thin crossed ribbons in bands of two shades, three
+ * steps a block, straight between ends at one height and curving (low end first) between ends at two. The ends are
+ * block positions; the wire is held at {@code anchor} inside each (the middle by default).
+ */
+export function wireMesh(wires) {
+	const positions = [], colors = [], indices = [];
+	for (const wire of wires) {
+		const anchor = wire.anchor ?? [0.5, 0.5, 0.5];
+		const from = new THREE.Vector3(...wire.from).add(new THREE.Vector3(...anchor));
+		const to = new THREE.Vector3(...wire.to).add(new THREE.Vector3(...anchor));
+		const d = new THREE.Vector3().subVectors(to, from);
+		const width = wire.width ?? 0.04;
+		const flat = Math.hypot(d.x, d.z) || 1;
+		const side = new THREE.Vector3(d.z / flat, 0, -d.x / flat).multiplyScalar(width / 2); // Across the wire.
+		const steps = Math.max(1, Math.round(d.length()) * 3);
+		const base = new THREE.Color(wire.color ?? '#666666');
+		// The game's curve: y = dy f^2 rising, dy - dy (1 - f)^2 falling.
+		const point = f => new THREE.Vector3(from.x + d.x * f,
+			from.y + (d.y > 0 ? d.y * f * f : d.y - d.y * (1 - f) * (1 - f)), from.z + d.z * f);
+		for (const lift of [width, 0]) { // The two ribbons: one rising across the wire, one falling.
+			for (let i = 0; i < steps; i++) {
+				const shade = i % 2 === (lift ? 0 : 1) ? 0.7 : 1.0;
+				const c = base.clone().multiplyScalar(shade);
+				const start = positions.length / 3;
+				for (const f of [i / steps, (i + 1) / steps]) {
+					const p = point(f);
+					positions.push(p.x - side.x, p.y + lift, p.z - side.z, p.x + side.x, p.y + width - lift, p.z + side.z);
+					colors.push(c.r, c.g, c.b, c.r, c.g, c.b);
+				}
+				indices.push(start, start + 1, start + 3, start, start + 3, start + 2);
+			}
+		}
+	}
+	const geometry = new THREE.BufferGeometry();
+	geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+	geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+	geometry.setIndex(indices);
+	const mesh = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.DoubleSide }));
+	mesh.name = 'wires';
+	return mesh;
+}
+
 /** A checkerboard for textures that could not be found, as the game draws them. */
 function missingTexture() {
 	const canvas = document.createElement('canvas');
@@ -337,6 +381,8 @@ export class SceneBuilder {
 				await this.#addModel(buckets, entry, part, solid);
 
 		const group = new THREE.Group();
+		if (scene.wires?.length)
+			group.add(wireMesh(scene.wires));
 		for (const [textureId, data] of buckets) {
 			const geometry = new THREE.BufferGeometry();
 			geometry.setAttribute('position', new THREE.Float32BufferAttribute(data.positions, 3));

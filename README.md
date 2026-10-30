@@ -72,6 +72,9 @@ it could not be loaded.
   instead of `pos` fill a box.
 - **`tints`**: the colour for faces with a `tintindex` (grass, leaves); a block entry's `tint` picks one by name or
   gives a colour.
+- **`wires`**: wires strung between blocks, `{ "from": [x, y, z], "to": [x, y, z] }` with optional `color`, `width`
+  and `anchor` (where in each block the wire is held, `[0.5, 0.5, 0.5]` by default). They are drawn the way the game
+  draws a leash: two thin crossed ribbons in bands, curving when the ends are at different heights.
 
 A state property the scene leaves out matches any variant, as if it were at the block's default, so a build copied
 from a guide book (which names only the properties that matter) still finds its models.
