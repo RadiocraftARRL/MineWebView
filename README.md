@@ -107,6 +107,15 @@ SceneBuilder.registerLoader('radiocraft:wire', ({ block, model, blockAt }) => {
 
 Register loaders before the first `<mine-web-view>` loads its scene.
 
+## Scenes to .glb
+
+`src/export.js` turns a scene into a `.glb` with its textures inside (`sceneToGlb`, `sceneUrlToGlb`), so a site can
+serve one file per build and no resource files at all. `tools/export.html` does it in a browser: serve it where it can
+fetch your scenes and open `tools/export.html?scene=builds/first_station.json&loaders=loaders.js` (repeat `scene=` for
+more; the files download). A loaders script registers your custom model loaders, importing `SceneBuilder` from
+`'minewebview'`, which the page maps to its own copy. The faces keep the game's shading as vertex colours on unlit
+materials, and the textures stay pixel-sharp.
+
 ## Minecraft's own assets
 
 This repository contains no Minecraft textures or models: the demo's grass and dirt are drawn for it (CC0, see

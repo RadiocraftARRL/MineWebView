@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<title>MineWebView: scene to .glb</title>
+	<!--
+		Turns scenes into .glb files you can serve on their own. Put this page (and, if your models need them, a
+		script registering your custom model loaders, importing SceneBuilder from 'minewebview') where it can fetch
+		your scenes, serve that folder, and open
+		export.html?scene=builds/first_station.json&loaders=loaders.js. Several scenes: repeat scene=.
+		The .glb files download; window.mineWebViewExports holds them as base64 for scripts.
+	-->
+	<script type="importmap">
+		{ "imports": {
+			"three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+			"three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/",
+			"minewebview": "../src/mine-web-view.js"
+		} }
+	</script>
+	<style>body { font: 14px system-ui, sans-serif; padding: 16px; }</style>
+</head>
+<body>
+<p id="status">Exporting…</p>
+<script type="module">
+	import { sceneUrlToGlb } from '../src/export.js';
+
+	const params = new URLSearchParams(location.search);
+	const status = document.getElementById('status');
+	window.mineWebViewExports = {};
+	try {
+		for (const loaders of params.getAll('loaders'))
+			await import(new URL(loaders, document.baseURI).href);
+		for (const scene of params.getAll('scene')) {
+			const glb = await sceneUrlToGlb(scene);
+			const name = scene.split('/').pop().replace(/\.json$/, '.glb');
+			const bytes = new Uint8Array(glb);
+			let binary = '';
+			for (let i = 0; i < bytes.length; i += 0x8000)
+				binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+			window.mineWebViewExports[name] = btoa(binary);
+			if (!params.has('nodownload')) {
+				const link = Object.assign(document.createElement('a'), { href: URL.createObjectURL(new Blob([glb])), download: name });
+				link.click();
+			}
+		}
+		status.textContent = 'Exported ' + Object.keys(window.mineWebViewExports).join(', ');
+	}
+	catch (error) {
+		status.textContent = 'Failed: ' + error;
+		console.error(error);
+	}
+	window.mineWebViewDone = true;
+</script>
+</body>
+</html>
