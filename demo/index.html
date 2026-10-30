@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>MineWebView demo</title>
+	<script type="importmap">
+		{ "imports": {
+			"three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+			"three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+		} }
+	</script>
+	<script type="module" src="../src/mine-web-view.js"></script>
+	<style>
+		body { margin: 0; padding: 16px; font: 16px/1.5 system-ui, sans-serif; background: #1d2026; color: #e8e8e8; }
+		main { max-width: 900px; margin: 0 auto; }
+		mine-web-view { border-radius: 8px; background: #2a2f38; }
+	</style>
+</head>
+<body>
+<main>
+	<h1>MineWebView</h1>
+	<p>Drag to turn the build, scroll or pinch to zoom, right-drag to pan. The signposts point north, east and west:
+		the blockstate's rotation and a rotated element.</p>
+	<mine-web-view src="scenes/demo.json" auto-rotate></mine-web-view>
+</main>
+</body>
+</html>

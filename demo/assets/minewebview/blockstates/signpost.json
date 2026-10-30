@@ -1,0 +1,19 @@
+{
+  "variants": {
+    "facing=north": {
+      "model": "minewebview:block/signpost"
+    },
+    "facing=east": {
+      "model": "minewebview:block/signpost",
+      "y": 90
+    },
+    "facing=south": {
+      "model": "minewebview:block/signpost",
+      "y": 180
+    },
+    "facing=west": {
+      "model": "minewebview:block/signpost",
+      "y": 270
+    }
+  }
+}

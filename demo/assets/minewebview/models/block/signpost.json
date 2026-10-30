@@ -1,0 +1,109 @@
+{
+  "textures": {
+    "post": "minewebview:block/wood",
+    "sign": "minewebview:block/sign",
+    "particle": "minewebview:block/wood"
+  },
+  "elements": [
+    {
+      "from": [
+        7,
+        0,
+        7
+      ],
+      "to": [
+        9,
+        14,
+        9
+      ],
+      "faces": {
+        "north": {
+          "texture": "#post"
+        },
+        "south": {
+          "texture": "#post"
+        },
+        "east": {
+          "texture": "#post"
+        },
+        "west": {
+          "texture": "#post"
+        },
+        "up": {
+          "texture": "#post"
+        },
+        "down": {
+          "texture": "#post"
+        }
+      }
+    },
+    {
+      "from": [
+        7.5,
+        10,
+        0
+      ],
+      "to": [
+        8.5,
+        13,
+        9
+      ],
+      "rotation": {
+        "origin": [
+          8,
+          11.5,
+          8
+        ],
+        "axis": "x",
+        "angle": 22.5
+      },
+      "faces": {
+        "east": {
+          "uv": [
+            16,
+            4,
+            0,
+            12
+          ],
+          "texture": "#sign"
+        },
+        "west": {
+          "uv": [
+            0,
+            4,
+            16,
+            12
+          ],
+          "texture": "#sign"
+        },
+        "north": {
+          "uv": [
+            0,
+            4,
+            1,
+            12
+          ],
+          "texture": "#sign"
+        },
+        "up": {
+          "uv": [
+            0,
+            4,
+            1,
+            12
+          ],
+          "texture": "#post"
+        },
+        "down": {
+          "uv": [
+            0,
+            4,
+            1,
+            12
+          ],
+          "texture": "#post"
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "name": "minewebview",
+  "version": "0.1.0",
+  "description": "Minecraft builds on a web page you can turn around: scenes built from blockstate and model files, or glTF exports.",
+  "type": "module",
+  "main": "src/mine-web-view.js",
+  "exports": { ".": "./src/mine-web-view.js" },
+  "files": ["src"],
+  "peerDependencies": { "three": ">=0.160.0" },
+  "license": "GPL-3.0-only",
+  "repository": { "type": "git", "url": "https://github.com/RadiocraftARRL/MineWebView.git" }
+}

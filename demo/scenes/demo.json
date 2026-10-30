@@ -1,0 +1,11 @@
+{
+  "assets": ["../assets/"],
+  "blocks": [
+    { "from": [0, 0, 0], "to": [4, 0, 4], "block": "minewebview:grass_block" },
+    { "from": [0, -1, 0], "to": [4, -1, 4], "block": "minewebview:dirt" },
+    { "pos": [1, 1, 1], "block": "minewebview:signpost[facing=north]" },
+    { "pos": [3, 1, 1], "block": "minewebview:signpost[facing=east]" },
+    { "pos": [1, 1, 3], "block": "minewebview:signpost[facing=west]" },
+    { "pos": [3, 1, 3], "block": "minewebview:grass_block" }
+  ]
+}
