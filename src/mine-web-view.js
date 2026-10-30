@@ -16,6 +16,8 @@ export { AssetSource, SceneBuilder, parseBlockString } from './scene-builder.js'
  *   auto-rotate  turn slowly until the viewer is touched
  *   background   a CSS colour behind the build (transparent by default)
  *   zoom         camera distance: 1 (the default) just fits the build, more is further away
+ *   view         where the camera starts, as a direction from the build: "x y z" (x east, y up, z south);
+ *                "1 0.8 1.2" (south-east, a little above) by default
  */
 export class MineWebView extends HTMLElement {
 	static observedAttributes = ['src', 'assets', 'background', 'auto-rotate'];
@@ -147,7 +149,7 @@ export class MineWebView extends HTMLElement {
 		}
 	}
 
-	/** Points the camera at the build from the south-east, a little above, just far enough to see all of it. */
+	/** Points the camera at the build from {@code view} (south-east, a little above), just far enough to see all of it. */
 	#frameCamera() {
 		const sphere = new THREE.Box3().setFromObject(this.#content).getBoundingSphere(new THREE.Sphere());
 		const radius = sphere.radius || 1;
@@ -156,7 +158,9 @@ export class MineWebView extends HTMLElement {
 		const vertical = THREE.MathUtils.degToRad(this.#camera.fov) / 2;
 		const horizontal = Math.atan(Math.tan(vertical) * this.#camera.aspect);
 		const distance = radius / Math.sin(Math.min(vertical, horizontal)) * zoom;
-		const direction = new THREE.Vector3(1, 0.8, 1.2).normalize();
+		const view = (this.getAttribute('view') ?? '').trim().split(/[\s,]+/).map(Number);
+		const direction = (view.length === 3 && view.every(Number.isFinite) && view.some(v => v !== 0)
+			? new THREE.Vector3(...view) : new THREE.Vector3(1, 0.8, 1.2)).normalize();
 		this.#camera.position.copy(sphere.center).addScaledVector(direction, distance);
 		this.#camera.near = radius / 50;
 		this.#camera.far = distance + radius * 20;

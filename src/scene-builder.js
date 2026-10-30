@@ -320,6 +320,8 @@ export class SceneBuilder {
 	/** The models to draw for one scene entry, after blockstates and custom loaders. */
 	async #partsFor(entry, blockAt) {
 		const parts = [];
+		if (entry.geo)
+			return parts; // Drawn by #addGeo.
 		const queue = entry.model
 			? [{ model: entry.model, x: entry.x ?? 0, y: entry.y ?? 0 }]
 			: (await modelsForState(this.assets, entry.block, entry.state ?? {})).map(a => ({ model: a.model, x: a.x ?? 0, y: a.y ?? 0 }));
@@ -379,6 +381,9 @@ export class SceneBuilder {
 		for (const { entry, parts } of resolved)
 			for (const part of parts)
 				await this.#addModel(buckets, entry, part, solid);
+		for (const entry of entries)
+			if (entry.geo)
+				await this.#addGeo(buckets, entry);
 
 		const group = new THREE.Group();
 		if (scene.wires?.length)
@@ -393,6 +398,93 @@ export class SceneBuilder {
 			group.add(new THREE.Mesh(geometry, material));
 		}
 		return group;
+	}
+
+	/**
+	 * A GeckoLib (Bedrock) geometry, { pos, geo: "ns:block/name", texture: "ns:block/name", y }: the file
+	 * ns/geo/block/name.geo.json, drawn as GeckoLib draws it (its x mirrored, bones and cubes turned about their pivots,
+	 * Z then Y then X, each face's UV laid as GeckoLib lays it) and turned y degrees like a blockstate. Faces are shaded
+	 * by the way they face, like the block models around them.
+	 */
+	async #addGeo(buckets, entry) {
+		const [ns, path] = splitId(entry.geo);
+		const file = await this.assets.getJson('geo', `${ns}:${path}.geo`);
+		const geometry = file?.['minecraft:geometry']?.[0];
+		if (!geometry) {
+			console.warn('[MineWebView] missing geometry', entry.geo);
+			return;
+		}
+		const textureId = fullId(entry.texture ?? entry.geo);
+		const texW = geometry.description?.texture_width ?? 16, texH = geometry.description?.texture_height ?? 16;
+		await this.#material(textureId);
+		if (!buckets.has(textureId))
+			buckets.set(textureId, { positions: [], uvs: [], colors: [], indices: [] });
+		const bucket = buckets.get(textureId);
+
+		const deg = THREE.MathUtils.degToRad;
+		// GeckoLib's frame: x mirrored, rotations about x and y negated, applied Z, Y, X about the pivot.
+		const turn = (pivot, rotation) => {
+			const p = new THREE.Vector3(-pivot[0] / 16, pivot[1] / 16, pivot[2] / 16);
+			const [rx, ry, rz] = rotation ?? [0, 0, 0];
+			return new THREE.Matrix4().makeTranslation(p.x, p.y, p.z)
+				.multiply(new THREE.Matrix4().makeRotationZ(deg(rz)))
+				.multiply(new THREE.Matrix4().makeRotationY(deg(-ry)))
+				.multiply(new THREE.Matrix4().makeRotationX(deg(-rx)))
+				.multiply(new THREE.Matrix4().makeTranslation(-p.x, -p.y, -p.z));
+		};
+		const [bx, by, bz] = entry.pos;
+		const place = new THREE.Matrix4().makeTranslation(bx + 0.5, by, bz + 0.5)
+			.multiply(new THREE.Matrix4().makeRotationY(deg(-(entry.y ?? 0))));
+		const bones = new Map(geometry.bones.map(bone => [bone.name, bone]));
+		const boneMatrix = new Map();
+		const matrixOf = bone => {
+			if (!boneMatrix.has(bone.name)) {
+				const parent = bone.parent && bones.get(bone.parent) ? matrixOf(bones.get(bone.parent)) : place;
+				boneMatrix.set(bone.name, parent.clone().multiply(turn(bone.pivot ?? [0, 0, 0], bone.rotation)));
+			}
+			return boneMatrix.get(bone.name);
+		};
+
+		for (const bone of geometry.bones) {
+			for (const cube of bone.cubes ?? []) {
+				if (!cube.uv || Array.isArray(cube.uv))
+					continue; // Box UV is not supported yet.
+				const inflate = (cube.inflate ?? bone.inflate ?? 0) / 16;
+				const [ox, oy, oz] = cube.origin, [sx, sy, sz] = cube.size;
+				const x0 = -(ox + sx) / 16 - inflate, y0 = oy / 16 - inflate, z0 = oz / 16 - inflate;
+				const x1 = x0 + sx / 16 + 2 * inflate, y1 = y0 + sy / 16 + 2 * inflate, z1 = z0 + sz / 16 + 2 * inflate;
+				// GeckoLib's corners: back is low x, left is low z.
+				const LB = [x0, y0, z0], RB = [x0, y0, z1], tLB = [x0, y1, z0], tRB = [x0, y1, z1];
+				const tLF = [x1, y1, z0], tRF = [x1, y1, z1], LF = [x1, y0, z0], RF = [x1, y0, z1];
+				const quads = {
+					west: [tRB, tLB, LB, RB], east: [tLF, tRF, RF, LF], north: [tLB, tLF, LF, LB],
+					south: [tRF, tRB, RB, RF], up: [tRB, tRF, tLF, tLB], down: [LB, LF, RF, RB],
+				};
+				const matrix = matrixOf(bone).clone().multiply(turn(cube.pivot ?? [0, 0, 0], cube.rotation));
+				const normalMatrix = new THREE.Matrix3().getNormalMatrix(matrix);
+				for (const [face, corners] of Object.entries(quads)) {
+					const uv = cube.uv[face];
+					if (!uv)
+						continue;
+					const [u0, v0] = uv.uv, [us, vs] = uv.uv_size ?? [0, 0];
+					// GeckoLib swaps u across the face when the cube is not mirrored.
+					const uA = cube.mirror ? u0 / texW : (u0 + us) / texW, uB = cube.mirror ? (u0 + us) / texW : u0 / texW;
+					const vA = v0 / texH, vB = (v0 + vs) / texH;
+					const uvCorners = [[uA, vA], [uB, vA], [uB, vB], [uA, vB]];
+					const normal = new THREE.Vector3(...STEP[face]).applyMatrix3(normalMatrix).normalize();
+					const shade = normal.x * normal.x * FACE_SHADE.east + normal.z * normal.z * FACE_SHADE.north
+						+ normal.y * normal.y * (normal.y > 0 ? FACE_SHADE.up : FACE_SHADE.down);
+					const base = bucket.positions.length / 3;
+					for (let i = 0; i < 4; i++) {
+						const v = new THREE.Vector3(...corners[i]).applyMatrix4(matrix);
+						bucket.positions.push(v.x, v.y, v.z);
+						bucket.uvs.push(uvCorners[i][0], 1 - uvCorners[i][1]);
+						bucket.colors.push(shade, shade, shade);
+					}
+					bucket.indices.push(base, base + 1, base + 2, base, base + 2, base + 3); // GeckoLib winds its faces the other way.
+				}
+			}
+		}
 	}
 
 	async #addModel(buckets, entry, part, solid) {

@@ -46,6 +46,7 @@ http://localhost:8000/demo/). Opened straight from disk, the browser will not le
 | `auto-rotate` | Turns slowly until someone touches it. |
 | `background`  | A CSS colour behind the build. Transparent by default. |
 | `zoom`        | How far away the camera starts: 1 (the default) just fits the build. |
+| `view`        | Where the camera starts, as a direction from the build, `"x y z"` (x east, y up, z south). Default `"1 0.8 1.2"`, the south-east. |
 
 The element is 4:3 by default; size it with CSS like an image. It fires `load` once the build is shown and `error` if
 it could not be loaded.
@@ -72,6 +73,10 @@ it could not be loaded.
   instead of `pos` fill a box.
 - **`tints`**: the colour for faces with a `tintindex` (grass, leaves); a block entry's `tint` picks one by name or
   gives a colour.
+- **GeckoLib models**: a block a mod draws with GeckoLib (no block model of its own) can be given as
+  `{ "pos": [x, y, z], "geo": "ns:block/name", "texture": "ns:block/name", "y": 90 }`: the geometry
+  `ns/geo/block/name.geo.json` and texture `ns/textures/block/name.png`, drawn at rest (no animation) as GeckoLib draws
+  them, turned `y` degrees like a blockstate. Per-face UVs only for now; box UV cubes are skipped.
 - **`wires`**: wires strung between blocks, `{ "from": [x, y, z], "to": [x, y, z] }` with optional `color`, `width`
   and `anchor` (where in each block the wire is held, `[0.5, 0.5, 0.5]` by default). They are drawn the way the game
   draws a leash: two thin crossed ribbons in bands, curving when the ends are at different heights.
